@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:team_maker/constants/images.dart';
 
-getLogo(BuildContext context,double ratio) {
+getImage(BuildContext context,double ratio, String path) {
   
   return ClipRRect(
     borderRadius: BorderRadius.circular(20),
     child: Image.asset(
-      teamMakerPath,
+      path,
       width: MediaQuery.of(context).size.height * ratio,
     ),
   );
