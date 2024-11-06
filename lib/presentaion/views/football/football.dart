@@ -4,6 +4,7 @@ import 'package:team_maker/constants/colors.dart';
 import 'package:team_maker/constants/routes.dart';
 import 'package:team_maker/presentaion/constFunctions/my_text_field.dart';
 import 'package:team_maker/presentaion/constFunctions/show_player_dialog.dart';
+import 'package:team_maker/presentaion/views/football/create_game.dart';
 
 import '../../../domain/controllers/playerController.dart';
 import '../../../service/player_service.dart';
@@ -18,23 +19,23 @@ class Football extends StatefulWidget {
 class _FootballState extends State<Football> {
   int numOfGames = 5;
   late final TextEditingController playerName = TextEditingController();
-  
+
   late final PlayerService _playerService;
 
   @override
   void initState() {
     super.initState();
-    final playerController = PlayerController();
-    _playerService = PlayerService(playerController);
+    _playerService = PlayerService();
     _initializeData();
   }
 
   Future<void> _initializeData() async {
     await _playerService.initialize();
   }
-  
+
   Future<void> _addPlayer() async {
-    showPlayerDataDialog(context, (String name, int attackRate, int midRate, int defRate) async {
+    showPlayerDataDialog(context,
+        (String name, int attackRate, int midRate, int defRate) async {
       await _playerService.addPlayer(
         name: name,
         attackRate: attackRate,
@@ -43,7 +44,7 @@ class _FootballState extends State<Football> {
       );
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,17 +174,19 @@ class _FootballState extends State<Football> {
                   label: const Text("Add New Game"),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                   onPressed: () {
-                    // Add new game action
-                    
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const CreateGameScreen()),
+                    );
                   },
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.person_add, color: Colors.white),
-                  label: const Text("Add New Player"),
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  onPressed:_addPlayer
-                ),
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    label: const Text("Add New Player"),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    onPressed: _addPlayer),
               ],
             ),
           ),

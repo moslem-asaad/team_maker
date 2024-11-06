@@ -24,9 +24,18 @@ class PlayerController {
     await prefs.setString(_playersKey, playersJson);
   }
 
-  // Add a player
-  Future<void> addPlayer(Player player) async {
-    _players.add(player);
+  Future<String> nextPlayerId ()async{
+    return _players.length.toString();
+  }
+
+ // Add a player
+  Future<void> addPlayer(String name,int attackRate,int midRate,int defRate) async {
+    name = name == ''? 'player ${await nextPlayerId()}' : name;
+    attackRate = attackRate == 0? 75:attackRate;
+    midRate = midRate == 0? 75:midRate;
+    defRate = defRate == 0? 75:defRate;
+    Player newPlayer = Player(name, attackRate, midRate, defRate, await nextPlayerId());
+    _players.add(newPlayer);
     await _savePlayers();
   }
 
@@ -36,7 +45,8 @@ class PlayerController {
   }
 
   // Edit a player
-  Future<void> editPlayer(int index, Player updatedPlayer) async {
+  Future<void> editPlayer(int index, String name,int attackRate,int midRate,int defRate,String id) async {
+    Player updatedPlayer = Player(name, attackRate, midRate, defRate,id);
     if (index >= 0 && index < _players.length) {
       _players[index] = updatedPlayer;
       await _savePlayers();

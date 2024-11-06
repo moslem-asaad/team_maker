@@ -4,14 +4,16 @@ class Player {
   int? attackRate;
   int? midRate;
   int? defRate;
-  double? overall;
+  double? overall = 75;
+  String? id;
 
-  Player(this.fullName, this.attackRate, this.midRate, this.defRate) {
+  Player(this.fullName, this.attackRate, this.midRate, this.defRate,this.id) {
     calculateOverall();
   }
 
   void calculateOverall() {
-    overall = (attackRate! + defRate! + midRate!) / 3;
+    attackRate! + defRate! + midRate! >0 ?
+    overall = (attackRate! + defRate! + midRate!) / 3 : 75;
   }
 
   // Convert a Player object into a Map for JSON encoding
@@ -21,6 +23,7 @@ class Player {
         'midRate': midRate,
         'defRate': defRate,
         'overall': overall,
+        'id':id,
       };
 
   // Convert a Map into a Player object
@@ -29,5 +32,6 @@ class Player {
         json['attackRate'] as int?,
         json['midRate'] as int?,
         json['defRate'] as int?,
+        json['id'] as String?
       )..overall = json['overall'] as double?;
 }

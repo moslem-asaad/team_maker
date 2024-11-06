@@ -19,8 +19,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   @override
   void initState() {
     super.initState();
-    final playerController = PlayerController();
-    _playerService = PlayerService(playerController);
+    _playerService = PlayerService();
     _initializeData();
   }
 
@@ -50,9 +49,9 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     showEditPlayerDataDialog(
       context,
       player.fullName ?? '',
-      player.attackRate ?? 0,
-      player.midRate ?? 0,
-      player.defRate ?? 0,
+      player.attackRate ?? 75,
+      player.midRate ?? 75,
+      player.defRate ?? 75,
       (String name, int attackRate, int midRate, int defRate) async {
         await _playerService.editPlayer(
           index: index,
@@ -60,6 +59,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           attackRate: attackRate,
           midRate: midRate,
           defRate: defRate,
+          id: player.id!,
         );
         setState(() {
           _players = _playerService.getAllPlayers();

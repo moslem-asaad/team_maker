@@ -1,12 +1,20 @@
-// player_service.dart
 import 'package:flutter/material.dart';
 import '../domain/controllers/playerController.dart';
 import '../domain/entities/player.dart';
 
 class PlayerService {
-  final PlayerController _playerController;
+  // Private constructor
+  PlayerService._privateConstructor(this._playerController);
 
-  PlayerService(this._playerController);
+  // Static instance of PlayerService
+  static final PlayerService _instance = PlayerService._privateConstructor(PlayerController());
+
+  // Factory constructor to return the singleton instance
+  factory PlayerService() {
+    return _instance;
+  }
+
+  final PlayerController _playerController;
 
   // Load players initially
   Future<void> initialize() async {
@@ -20,8 +28,7 @@ class PlayerService {
     required int midRate,
     required int defRate,
   }) async {
-    Player newPlayer = Player(name, attackRate, midRate, defRate);
-    await _playerController.addPlayer(newPlayer);
+    await _playerController.addPlayer(name, attackRate, midRate, defRate);
   }
 
   // Get all players
@@ -36,15 +43,13 @@ class PlayerService {
     required int attackRate,
     required int midRate,
     required int defRate,
+    required String id,
   }) async {
-    Player updatedPlayer = Player(name, attackRate, midRate, defRate);
-    await _playerController.editPlayer(index, updatedPlayer);
+    await _playerController.editPlayer(index, name, attackRate, midRate, defRate, id);
   }
 
   // Delete a player by index
   Future<void> deletePlayer(int index) async {
     await _playerController.deletePlayer(index);
   }
-
-  // Additional service logic (if needed) can go here
 }
