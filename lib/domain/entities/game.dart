@@ -4,113 +4,224 @@ import 'package:team_maker/domain/entities/team.dart';
 
 import 'player.dart';
 
-class Game{
+class Game {
   DateTime? gameDate;
-  
-  int? teamSize;
+
+  int? numOfTeams;
   List<Player>? players;
   // based on team size and num of players will generate n teams
-   
+
   List<Team>? teams; // default 2 teams
   String? gameDuration;
-  List<int>? score; //[0] - team1 scoore, [1] team2 score .. 
-  
+  List<int>? score; //[0] - team1 scoore, [1] team2 score ..
+
   bool? automaticGenerating = true;
   bool? randomGenerating = false;
 
-  Game({this.teamSize,this.players,this.automaticGenerating,this.randomGenerating}){
+  Game(
+      {this.numOfTeams,
+      this.players,
+      this.automaticGenerating,
+      this.randomGenerating}) {
     gameDate = DateTime.now();
     generateTeams();
   }
 
-  void makeManualGenerating(){
+  void makeManualGenerating() {
     automaticGenerating = false;
   }
 
-  void makeRandomGenerating(){
+  void makeRandomGenerating() {
     randomGenerating = true;
   }
-  
+
   List<Team> generateTeams() {
-    if(!automaticGenerating!) return generateManually();
-    else{
-      if(randomGenerating!) return generateRandomlly();
-      else{
+    if (!automaticGenerating!)
+      return generateManually();
+    else {
+      if (randomGenerating!)
+        return generateRandomlly();
+      else {
         return generateEqually();
       }
     }
   }
-  
+
   List<Team> generateManually() {
-    int numTeams = calculateNumOfTeams();
-  
-    teams = List.generate(numTeams, (index) => Team([]));
+    //int numTeams = calculateNumOfTeams();
+
+    teams = List.generate(numOfTeams!, (index) => Team([]));
     return teams!;
   }
-  
+
   List<Team> generateRandomlly() {
-  int numTeams = calculateNumOfTeams();
-  
-  teams = List.generate(numTeams, (index) => Team([]));
+   // int numTeams = calculateNumOfTeams();
 
-  //Shuffle the players list to ensure randomness
-  List<Player> shuffledPlayers = List.from(players!);
-  shuffledPlayers.shuffle(Random());
+    teams = List.generate(numOfTeams!, (index) => Team([]));
 
-  //Distribute players across the teams randomly
-  int teamIndex = 0;
-  for (Player player in shuffledPlayers) {
-    teams![teamIndex].players.add(player);
-    teamIndex = (teamIndex + 1) % numTeams; // Move to the next team, looping back if needed
-  }
+    //Shuffle the players list to ensure randomness
+    List<Player> shuffledPlayers = List.from(players!);
+    shuffledPlayers.shuffle(Random());
 
-  // Step 5: Recalculate each team's average rating
-  for (var team in teams!) {
-    team.calculateOverall();
-  }
-  return teams!;
-}
-  
-  List<Team> generateEqually() {
-    int numTeams = calculateNumOfTeams();
-  
-    teams = List.generate(numTeams, (index) => Team([]));
+    //Distribute players across the teams randomly
+    int teamIndex = 0;
+    for (Player player in shuffledPlayers) {
+      teams![teamIndex].players.add(player);
+      teamIndex = (teamIndex + 1) %
+          numOfTeams!; // Move to the next team, looping back if needed
+    }
+
+    // Step 5: Recalculate each team's average rating
+    for (var team in teams!) {
+      team.calculateOverall();
+    }
+
+    this.teams = teams!;
     return teams!;
   }
 
-  int calculateNumOfTeams(){
-    double  numTeams = (players!.length/teamSize!);
-    return numTeams.toInt() < numTeams? numTeams.toInt()+1: numTeams.toInt();
+  List<Team> generateEqually() {
+    //int numTeams = calculateNumOfTeams();
+    double epsilon = 1.5 * findOptimalEpsilon();
+
+    // Initialize teams
+    teams = List.generate(numOfTeams!, (_) => Team([]));
+
+    // Shuffle players to ensure different results on each call
+    List<Player> shuffledPlayers = List.from(players!)..shuffle(Random());
+
+    bool teamsBalanced = false;
+
+    // Attempt to balance teams within the epsilon limit
+    while (!teamsBalanced) {
+      // Clear teams before each attempt
+      teams!.forEach((team) => team.players.clear());
+
+      // Distribute players across teams
+      for (int i = 0; i < shuffledPlayers.length; i++) {
+        teams![i % numOfTeams!].players.add(shuffledPlayers[i]);
+      }
+
+      // Calculate each team’s average rating
+      List<double> teamAverages = teams!.map((team) {
+        double totalRating =
+            team.players.fold(0, (sum, player) => sum + (player.overall ?? 0));
+        return team.players.isNotEmpty
+            ? totalRating / team.players.length
+            : 0.0;
+      }).toList();
+
+      // Calculate max and min average team ratings
+      double maxAverage = teamAverages.reduce(max);
+      double minAverage = teamAverages.reduce(min);
+
+      // Check if the difference is within the epsilon tolerance
+      teamsBalanced = (maxAverage - minAverage) <= epsilon;
+
+      // Shuffle players again if not balanced
+      if (!teamsBalanced) {
+        shuffledPlayers.shuffle(Random());
+      }
+    }
+
+    // Recalculate each team’s overall rating
+    for (var team in teams!) {
+      team.calculateOverall();
+    }
+    this.teams = teams!;
+    return teams!;
   }
+
+  // Method to find the optimal epsilon
+  double findOptimalEpsilon() {
+   // int numTeams = calculateNumOfTeams();
+    double minEpsilon = 0;
+    double maxEpsilon = players!.map((p) => p.overall ?? 0).reduce(max) -
+        players!.map((p) => p.overall ?? 0).reduce(min);
+    double epsilonThreshold = 0.01; // Precision level for epsilon
+
+    while ((maxEpsilon - minEpsilon) > epsilonThreshold) {
+      double midEpsilon = (minEpsilon + maxEpsilon) / 2;
+
+      // Check if we can divide teams with the current epsilon
+      if (canDivideTeams(numOfTeams!, midEpsilon)) {
+        maxEpsilon = midEpsilon;
+      } else {
+        minEpsilon = midEpsilon;
+      }
+    }
+    return maxEpsilon;
+  }
+
+  bool canDivideTeams(int m, double epsilon) {
+    if (players == null ||
+        players!.isEmpty ||
+        m <= 0 ||
+        numOfTeams == null ||
+        numOfTeams! <= 0) {
+      return false;
+    }
+
+    // Sort players by their overall rating to facilitate balanced team creation
+    List<Player> sortedPlayers = List.from(players!)
+      ..sort((a, b) => a.overall!.compareTo(b.overall!));
+
+    // Initialize m teams
+    List<List<Player>> teamPlayers = List.generate(m, (_) => []);
+
+    // Distribute players in a round-robin manner to balance teams
+    for (int i = 0; i < sortedPlayers.length; i++) {
+      teamPlayers[i % m].add(sortedPlayers[i]);
+    }
+
+    // Calculate the average rating for each team
+    List<double> teamAverages = teamPlayers.map((team) {
+      double teamTotal = team.fold(0, (sum, player) => sum + player.overall!);
+      return team.isNotEmpty ? teamTotal / team.length : 0.0;
+    }).toList();
+
+    // Find the maximum and minimum average ratings
+    double maxAverage = teamAverages.reduce((a, b) => a > b ? a : b);
+    double minAverage = teamAverages.reduce((a, b) => a < b ? a : b);
+
+    // Check if the difference between max and min average is within epsilon
+    return (maxAverage - minAverage) <= epsilon;
+  }
+
+  /*int calculateNumOfTeams() {
+    double numTeams = (players!.length / teamSize!);
+    return numTeams.toInt() < numTeams
+        ? numTeams.toInt() + 1
+        : numTeams.toInt();
+  }*/
 
   factory Game.fromJson(Map<String, dynamic> json) {
-  return Game(
-    teamSize: json['teamSize'] as int?,
-    players: (json['players'] as List<dynamic>?)
-        ?.map((playerJson) => Player.fromJson(playerJson))
-        .toList(),
-    automaticGenerating: json['automaticGenerating'] as bool?,
-    randomGenerating: json['randomGenerating'] as bool?,
-  )
-    ..gameDate = json['gameDate'] != null ? DateTime.parse(json['gameDate']) : null
-    ..teams = (json['teams'] as List<dynamic>?)
-        ?.map((teamJson) => Team.fromJson(teamJson))
-        .toList()
-    ..gameDuration = json['gameDuration'] as String?
-    ..score = (json['score'] as List<dynamic>?)?.map((e) => e as int).toList();
-}
-
+    return Game(
+      numOfTeams: json['numOfTeams'] as int?,
+      players: (json['players'] as List<dynamic>?)
+          ?.map((playerJson) => Player.fromJson(playerJson))
+          .toList(),
+      automaticGenerating: json['automaticGenerating'] as bool?,
+      randomGenerating: json['randomGenerating'] as bool?,
+    )
+      ..gameDate =
+          json['gameDate'] != null ? DateTime.parse(json['gameDate']) : null
+      ..teams = (json['teams'] as List<dynamic>?)
+          ?.map((teamJson) => Team.fromJson(teamJson))
+          .toList()
+      ..gameDuration = json['gameDuration'] as String?
+      ..score =
+          (json['score'] as List<dynamic>?)?.map((e) => e as int).toList();
+  }
 
   Map<String, dynamic> toJson() => {
-  'gameDate': gameDate?.toIso8601String(),
-  'teamSize': teamSize,
-  'players': players?.map((player) => player.toJson()).toList(),
-  'teams': teams?.map((team) => team.toJson()).toList(),
-  'gameDuration': gameDuration,
-  'score': score,
-  'automaticGenerating': automaticGenerating,
-  'randomGenerating': randomGenerating,
-};
-
-
+        'gameDate': gameDate?.toIso8601String(),
+        'numOfTeams': numOfTeams,
+        'players': players?.map((player) => player.toJson()).toList(),
+        'teams': teams?.map((team) => team.toJson()).toList(),
+        'gameDuration': gameDuration,
+        'score': score,
+        'automaticGenerating': automaticGenerating,
+        'randomGenerating': randomGenerating,
+      };
 }

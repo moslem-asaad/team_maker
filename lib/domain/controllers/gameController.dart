@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:team_maker/domain/entities/game.dart';
+import 'package:team_maker/domain/entities/player.dart';
 
 class Gamecontroller{
   static const String _gamessKey = 'games';
@@ -47,5 +48,11 @@ class Gamecontroller{
       await _savegames();
     }
   }
+
+  Future<Game> generateGame(int numOfTeams, List<Player> players, bool automaticGenerating, bool randomGenerating) async {
+    Game game = Game(numOfTeams: numOfTeams,players: players,automaticGenerating: automaticGenerating,randomGenerating: randomGenerating);
+    await game.generateTeams();
+    return game;
+  } 
   
 }

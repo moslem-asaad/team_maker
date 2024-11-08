@@ -25,8 +25,7 @@ class _GameState extends State<Game> {
   @override
   void initState() {
     super.initState();
-    final teamController = TeamController();
-    _teamService = TeamService(teamController);
+    _teamService = TeamService();
     _initializeData();
   }
 

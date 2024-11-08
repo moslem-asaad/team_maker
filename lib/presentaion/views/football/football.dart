@@ -1,12 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:team_maker/constants/colors.dart';
 import 'package:team_maker/constants/routes.dart';
-import 'package:team_maker/presentaion/constFunctions/my_text_field.dart';
+import 'package:team_maker/domain/entities/game.dart';
 import 'package:team_maker/presentaion/constFunctions/show_player_dialog.dart';
 import 'package:team_maker/presentaion/views/football/create_game.dart';
+import 'package:team_maker/service/game_service.dart';
 
-import '../../../domain/controllers/playerController.dart';
 import '../../../service/player_service.dart';
 
 class Football extends StatefulWidget {
@@ -18,12 +17,13 @@ class Football extends StatefulWidget {
 
 class _FootballState extends State<Football> {
   int numOfGames = 5;
-  late final TextEditingController playerName = TextEditingController();
-
+  late final GameService _gameService;
   late final PlayerService _playerService;
+   List<Game> _games = [];
 
   @override
   void initState() {
+    _gameService = GameService();
     super.initState();
     _playerService = PlayerService();
     _initializeData();
@@ -31,6 +31,10 @@ class _FootballState extends State<Football> {
 
   Future<void> _initializeData() async {
     await _playerService.initialize();
+    await _gameService.initialize();
+    setState(() {
+      _games = _gameService.getAllGames();
+    });
   }
 
   Future<void> _addPlayer() async {
@@ -55,7 +59,7 @@ class _FootballState extends State<Football> {
       body: Column(
         children: [
           // Manage Games Section
-          if (numOfGames > 0)
+          if (_games.length > 0)
             Expanded(
               flex: 3,
               child: Container(
@@ -72,7 +76,7 @@ class _FootballState extends State<Football> {
                     const SizedBox(height: 10),
                     Expanded(
                       child: ListView.builder(
-                        itemCount: numOfGames, // Example: 5 previous games
+                        itemCount: _games.length, // Example: 5 previous games
                         itemBuilder: (context, index) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 5.0),

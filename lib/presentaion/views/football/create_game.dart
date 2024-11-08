@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:team_maker/constants/colors.dart';
+import 'package:team_maker/domain/entities/game.dart';
 import 'package:team_maker/domain/entities/player.dart';
+import 'package:team_maker/presentaion/views/football/generate_game.dart';
+import 'package:team_maker/service/game_service.dart';
 import 'package:team_maker/service/player_service.dart';
 import 'package:team_maker/domain/controllers/playerController.dart';
 
@@ -15,6 +18,7 @@ class CreateGameScreen extends StatefulWidget {
 
 class _CreateGameScreenState extends State<CreateGameScreen> {
   late final PlayerService _playerService;
+  late final GameService _gameService;
   List<Player> _availablePlayers = [];
   List<Player> _selectedPlayers = [];
   TextEditingController _teamSizeController = TextEditingController();
@@ -30,6 +34,7 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
   void initState() {
     super.initState();
     _playerService = PlayerService();
+    _gameService = GameService();
     _initializeData();
     _scrollController.addListener(_updateScrollIndicators);
   }
@@ -97,8 +102,44 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
     );
   }
 
-  void _saveGame() {
-    print("Game saved");
+  void _saveGame() async {
+    if (_teamSizeController.text.isEmpty) {
+      // Handle missing team size input
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a team size')),
+      );
+      return;
+    }
+    // Parse team size input
+    int numOfTeams = int.tryParse(_teamSizeController.text) ?? 0;
+
+    if (numOfTeams <= 0) {
+      // Handle invalid team size input
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid team size')),
+      );
+      return;
+    }
+
+    Game game = await _gameService.generateGame(
+        numOfTeams, _selectedPlayers, isAutomaticBuild, isRandomGeneration);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Game saved and teams generated')),
+    );
+
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => GeneratedTeamsScreen(game: game,), // Replace with your actual screen
+    ),
+  );
+    
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedPlayers = List.from(_availablePlayers);
+    });
   }
 
   void _showFullScreenPlayerList() {
@@ -123,6 +164,29 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                   ),
                   child: Column(
                     children: [
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              setModalState(() {
+                                _selectAll();
+                              });
+                            },
+                            child: Text('select all'),
+                          ),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                setModalState(() {
+                                  _selectedPlayers = [];
+                                });
+                              });
+                            },
+                            child: Text('clear all'),
+                          ),
+                        ],
+                      ),
                       Expanded(
                         child: ListView.builder(
                           controller: scrollController,
@@ -209,7 +273,7 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'How many players in each team?',
+                      'How many Teams?',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
@@ -220,7 +284,7 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.blue[50],
-                        hintText: 'Enter team size',
+                        hintText: 'Enter mumber of teams',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
@@ -267,51 +331,59 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Generation Type Options
-                    const Text(
-                      'Choose generation type:',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    // Conditional Generation Type Options
+                    Visibility(
+                      visible: isAutomaticBuild,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Choose generation type:',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Radio<bool>(
+                                    value: true,
+                                    groupValue: isRandomGeneration,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        isRandomGeneration = value!;
+                                      });
+                                    },
+                                  ),
+                                  const Text('Random Generation',
+                                      style: TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Radio<bool>(
+                                    value: false,
+                                    groupValue: isRandomGeneration,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        isRandomGeneration = value!;
+                                      });
+                                    },
+                                  ),
+                                  const Text('Fairness Generation',
+                                      style: TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 20,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Radio<bool>(
-                              value: true,
-                              groupValue: isRandomGeneration,
-                              onChanged: (value) {
-                                setState(() {
-                                  isRandomGeneration = value!;
-                                });
-                              },
-                            ),
-                            const Text('Random Generation',
-                                style: TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Radio<bool>(
-                              value: false,
-                              groupValue: isRandomGeneration,
-                              onChanged: (value) {
-                                setState(() {
-                                  isRandomGeneration = value!;
-                                });
-                              },
-                            ),
-                            const Text('Fairness Generation',
-                                style: TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
 
                     // Player Selection with GestureDetector
                     const Text(
@@ -327,7 +399,9 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                           color: Colors.green[50],
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        height: 200,
+                        height: isAutomaticBuild
+                            ? 200
+                            : 300, // Expand height in Manual Build
                         padding: const EdgeInsets.symmetric(
                             vertical: 8, horizontal: 12),
                         child: GridView.builder(
