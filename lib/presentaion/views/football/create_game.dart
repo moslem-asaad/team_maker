@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:team_maker/constants/colors.dart';
 import 'package:team_maker/domain/entities/game.dart';
 import 'package:team_maker/domain/entities/player.dart';
 import 'package:team_maker/presentaion/views/football/generate_game.dart';
+import 'package:team_maker/presentaion/views/football/widgets/create_player.dart';
+import 'package:team_maker/presentaion/views/football/widgets/multi_selection.dart';
 import 'package:team_maker/service/game_service.dart';
 import 'package:team_maker/service/player_service.dart';
-import 'package:team_maker/domain/controllers/playerController.dart';
 
 import '../../constFunctions/show_player_dialog.dart';
 
@@ -21,14 +23,10 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
   late final GameService _gameService;
   List<Player> _availablePlayers = [];
   List<Player> _selectedPlayers = [];
-  TextEditingController _teamSizeController = TextEditingController();
-
+  int _numOfTeams = 2;
   bool isAutomaticBuild = true;
-  bool isRandomGeneration = true;
-
-  final ScrollController _scrollController = ScrollController();
-  bool _canScrollUp = false;
-  bool _canScrollDown = true;
+  bool isRandomGeneration = false;
+  int _currentStep = 0;
 
   @override
   void initState() {
@@ -36,13 +34,12 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
     _playerService = PlayerService();
     _gameService = GameService();
     _initializeData();
-    _scrollController.addListener(_updateScrollIndicators);
+    // _teamSizeController.text = _numOfTeams;
   }
 
   @override
   void dispose() {
-    _teamSizeController.dispose();
-    _scrollController.dispose();
+    // _teamSizeController.dispose();
     super.dispose();
   }
 
@@ -53,26 +50,70 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
     });
   }
 
-  void _updateScrollIndicators() {
-    setState(() {
-      _canScrollUp = _scrollController.offset > 0;
-      _canScrollDown =
-          _scrollController.offset < _scrollController.position.maxScrollExtent;
-    });
-  }
-
   void _clearallChoices() {
     setState(() {
       _selectedPlayers.clear();
-      isAutomaticBuild = true;
-      isRandomGeneration = true;
-      _teamSizeController.dispose();
-      _teamSizeController = TextEditingController();
+      //isAutomaticBuild = true;
+      //isRandomGeneration = true;
+      //_numOfTeams = 2;
+      // _teamSizeController.dispose();
+      // _teamSizeController = TextEditingController();
+    });
+  }
+
+  void _togglePlayerSelection(Player player) {
+    setState(() {
+      if (_selectedPlayers.contains(player)) {
+        _selectedPlayers.remove(player);
+      } else {
+        _selectedPlayers.add(player);
+      }
     });
   }
 
   Future<void> _addPlayer() async {
-    showPlayerDataDialog(
+  // Show the CreatePlayer dialog
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return CreatePlayer(
+        onSave: (String name, int attackRate, int midRate, int defRate) async {
+          await _playerService.addPlayer(
+            name: name,
+            attackRate: attackRate,
+            midRate: midRate,
+            defRate: defRate,
+          );
+          // After saving, refresh the state to reflect the new player
+          setState(() {
+            _availablePlayers = _playerService.getAllPlayers();
+
+            // Check if the list has been updated correctly
+            if (_availablePlayers.isNotEmpty) {
+              // Find the new player, handle if not found
+              final newPlayer = _availablePlayers.firstWhere(
+                (player) => player.id == (_availablePlayers.length - 1).toString(),
+                orElse: () => Player('', attackRate, midRate, defRate, ''), // Safeguard against no matching element
+              );
+
+              // Add the player to the selected list if found
+              if (newPlayer != null) {
+                _selectedPlayers.add(newPlayer);
+              } else {
+                print('New player not found in the available players list');
+              }
+            } else {
+              print('Available players list is empty after adding a new player');
+            }
+          });
+        },
+      );
+    },
+  );
+}
+
+
+  /*showPlayerDataDialog(
       context,
       (String name, int attackRate, int midRate, int defRate) async {
         // Add the new player to the service
@@ -99,19 +140,12 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
           }
         });
       },
-    );
-  }
+    );*/
 
   void _saveGame() async {
-    if (_teamSizeController.text.isEmpty) {
-      // Handle missing team size input
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a team size')),
-      );
-      return;
-    }
     // Parse team size input
-    int numOfTeams = int.tryParse(_teamSizeController.text) ?? 0;
+    int numOfTeams = /*int.tryParse(_teamSizeController.text) ?? 0;*/
+        _numOfTeams;
 
     if (numOfTeams <= 0) {
       // Handle invalid team size input
@@ -121,19 +155,26 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
       return;
     }
 
-    Game game = await _gameService.generateGame(
-        numOfTeams, _selectedPlayers, isAutomaticBuild, isRandomGeneration);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Game saved and teams generated')),
-    );
+    try {
+      Game game = await _gameService.generateGame(
+          numOfTeams, _selectedPlayers, isAutomaticBuild, isRandomGeneration);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('setting saved and teams generated')),
+      );
 
-    Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => GeneratedTeamsScreen(game: game,), // Replace with your actual screen
-    ),
-  );
-    
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GeneratedTeamsScreen(
+            game: game,
+          ), // Replace with your actual screen
+        ),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${error.toString()}')),
+      );
+    }
   }
 
   void _selectAll() {
@@ -263,233 +304,352 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Create Game')),
-      body: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'How many Teams?',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _teamSizeController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.blue[50],
-                        hintText: 'Enter mumber of teams',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+      backgroundColor: mainColor,
+      body: Stepper(
+        currentStep: _currentStep,
+        connectorColor: WidgetStatePropertyAll(boldGreen),
+        controlsBuilder: _buildControlBuilders,
+        onStepContinue: _OnStepContinue,
+        onStepCancel: _onStepCancel,
+        onStepTapped: _onStepTapped,
+        steps: [
+          _numOfTeamsStep(),
+          _buildAndGenartionStep(),
+          _selectPlayersStep(),
+          _reviewAndConfirmStep(),
+        ],
+      ),
+    );
+  }
 
-                    // Build Type Options
-                    const Text(
-                      'Choose build type:',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Radio<bool>(
-                          value: true,
-                          groupValue: isAutomaticBuild,
-                          onChanged: (value) {
-                            setState(() {
-                              isAutomaticBuild = value!;
-                            });
-                          },
-                        ),
-                        const Text('Automatic Build',
-                            style: TextStyle(fontSize: 16)),
-                        const SizedBox(width: 20),
-                        Radio<bool>(
-                          value: false,
-                          groupValue: isAutomaticBuild,
-                          onChanged: (value) {
-                            setState(() {
-                              isAutomaticBuild = value!;
-                            });
-                          },
-                        ),
-                        const Text('Manual Build',
-                            style: TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Conditional Generation Type Options
-                    Visibility(
-                      visible: isAutomaticBuild,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Choose generation type:',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 20,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Radio<bool>(
-                                    value: true,
-                                    groupValue: isRandomGeneration,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        isRandomGeneration = value!;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Random Generation',
-                                      style: TextStyle(fontSize: 16)),
-                                ],
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Radio<bool>(
-                                    value: false,
-                                    groupValue: isRandomGeneration,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        isRandomGeneration = value!;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Fairness Generation',
-                                      style: TextStyle(fontSize: 16)),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-
-                    // Player Selection with GestureDetector
-                    const Text(
-                      'Select players:',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const Divider(height: 1),
-                    GestureDetector(
-                      onTap: _showFullScreenPlayerList,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        height: isAutomaticBuild
-                            ? 200
-                            : 300, // Expand height in Manual Build
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 12),
-                        child: GridView.builder(
-                          controller: _scrollController,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2, // Display two players per row
-                            childAspectRatio:
-                                2.5, // Adjust the height-to-width ratio as needed
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                          ),
-                          itemCount: _availablePlayers.length,
-                          itemBuilder: (context, index) {
-                            final player = _availablePlayers[index];
-                            final isSelected =
-                                _selectedPlayers.contains(player);
-                            return ListTile(
-                              title: Text(
-                                player.fullName ?? 'Unnamed Player',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              subtitle: Text(
-                                '${player.overall?.toStringAsFixed(2) ?? 'N/A'}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              leading: Checkbox(
-                                value: isSelected,
-                                onChanged: (value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      _selectedPlayers.add(player);
-                                    } else {
-                                      _selectedPlayers.remove(player);
-                                    }
-                                  });
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+  Widget _buildControlBuilders(BuildContext context, ControlsDetails details) {
+    return Row(
+      children: <Widget>[
+        ElevatedButton(
+          onPressed: details.onStepContinue,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: boldBlue, // Change the button color
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(20), // Change the button shape
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            //color: Colors.blue[50],
+          child: const Text(
+            'Next',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton(
+          onPressed: details.onStepCancel,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: Colors.red), // Change the border color
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(20), // Change the button shape
+            ),
+          ),
+          child: const Text(
+            'Back',
+            style: TextStyle(color: Colors.red), // Change the text color
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _OnStepContinue() {
+    if (_currentStep < 3) {
+      setState(() {
+        _currentStep += 1;
+      });
+    } else {
+      _saveGame();
+    }
+  }
+
+  void _onStepCancel() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep -= 1;
+      });
+    }
+  }
+
+  void _onStepTapped(int tappedStep) {
+    if (tappedStep < _currentStep) {
+      setState(() {
+        _currentStep = tappedStep;
+      });
+    }
+  }
+
+  Step _numOfTeamsStep() {
+    double maxTeams = _availablePlayers.length.toDouble() < 2? 10 : _availablePlayers.length.toDouble();
+    return Step(
+      title: const Text('Select Number of Teams'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Number Of Teams: $_numOfTeams',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Slider(
+            value: _numOfTeams.toDouble(),
+            min: 2,
+            max: maxTeams,
+            divisions:
+                _availablePlayers.length < 2? 10: _availablePlayers.length, // Number of divisions for each step
+            label: '$_numOfTeams',
+            onChanged: (double value) {
+              setState(() {
+                _numOfTeams = value.toInt();
+              });
+            },
+            activeColor:
+                Colors.blue, // Color of the active portion of the slider
+            inactiveColor: Colors.blue[50], // Color of the inactive portion
+          ),
+        ],
+      ),
+    );
+  }
+
+  Step _buildAndGenartionStep() {
+    return Step(
+      title: const Text('Choose Generation Type'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /*const Text(
+            'Build type:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             child: Wrap(
-              spacing: 10, // Horizontal space between buttons
-              runSpacing: 10, // Vertical space between lines if they wrap
-              alignment: WrapAlignment.center,
+              spacing: 20,
               children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.save, color: Colors.white),
-                  label: const Text("Save Game"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 16),
-                  ),
-                  onPressed: _saveGame,
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.person_add, color: Colors.white),
-                  label: const Text("Add New Player"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 16),
-                  ),
-                  onPressed: _addPlayer,
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.clear, color: Colors.white),
-                  label: const Text("Clear All"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 16),
-                  ),
-                  onPressed: _clearallChoices,
+                Row(
+                  children: [
+                    Radio<bool>(
+                      value: true,
+                      groupValue: isAutomaticBuild,
+                      activeColor: Colors.blue,
+                      onChanged: (value) {
+                        setState(() {
+                          isAutomaticBuild = value!;
+                        });
+                      },
+                    ),
+                    const Text('Automatic Build',
+                        style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 20),
+                    /*Radio<bool>(
+                      value: false,
+                      groupValue: isAutomaticBuild,
+                      activeColor: Colors.blue,
+                      onChanged: (value) {
+                        setState(() {
+                          isAutomaticBuild = value!;
+                        });
+                      },
+                    ),*/
+                    SizedBox(width: 200,),
+                    //const Text('Manual Build', style: TextStyle(fontSize: 16)),
+                  ],
                 ),
               ],
             ),
+          ),*/
+          if (isAutomaticBuild) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'Choose generation type:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 20,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Radio<bool>(
+                        value: false,
+                        groupValue: isRandomGeneration,
+                        activeColor: Colors.blue,
+                        onChanged: (value) {
+                          setState(() {
+                            isRandomGeneration = value!;
+                          });
+                        },
+                      ),
+                      const Text('Fairness Generation',
+                          style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Radio<bool>(
+                        value: true,
+                        groupValue: isRandomGeneration,
+                        activeColor: Colors.blue,
+                        onChanged: (value) {
+                          setState(() {
+                            isRandomGeneration = value!;
+                          });
+                        },
+                      ),
+                      const Text('Random Generation',
+                          style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Step _selectPlayersStep() {
+    return Step(
+      title: const Text('Select Players '),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: Colors.blue),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  elevation: 10,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectAll();
+                  });
+                },
+                child: Text('Select All', style: TextStyle(color: boldBlue)),
+              ),
+              _selectedPlayers.isNotEmpty
+                  ? ElevatedButton.icon(
+                      icon: const Icon(Icons.clear, color: Colors.red),
+                      label: const Text("Clear All",
+                          style: TextStyle(color: Colors.red)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 16),
+                        elevation: 10,
+                      ),
+                      onPressed: _clearallChoices,
+                    )
+                  : SizedBox(),
+            ],
+          ),
+          if (_selectedPlayers.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _selectedPlayers.map((player) {
+                return Chip(
+                  label: Text(player.fullName ?? 'Unnamed Player'),
+                  onDeleted: () {
+                    _togglePlayerSelection(player);
+                  },
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 10),
+          MultiSelectDropdown(
+            availablePlayers: _availablePlayers,
+            selectedPlayers: _selectedPlayers,
+            onPlayerSelected: (player) {
+              setState(() {
+                _selectedPlayers.add(player);
+              });
+            },
+            onPlayerDeselected: (player) {
+              setState(() {
+                _selectedPlayers.remove(player);
+              });
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton.icon(
+                label: Text(
+                  'Create New Player',
+                  style: TextStyle(color: boldBlue),
+                ),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStatePropertyAll(Colors.blue),
+                  elevation: WidgetStatePropertyAll(8),
+                ),
+                onPressed: _addPlayer,
+              ),
+              ElevatedButton(
+                child: Text(
+                  'Show All players',
+                  style: TextStyle(
+                    color: boldBlue,
+                  ),
+                ),
+                style: ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll(Colors.green),
+                    elevation: WidgetStatePropertyAll(8)),
+                onPressed: _showFullScreenPlayerList,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Step _reviewAndConfirmStep() {
+    return Step(
+      title: const Text('Review & Confirm'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Review your game settings:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Text('Number of Teams: $_numOfTeams'),
+          Text('Build Type: ${isAutomaticBuild ? 'Automatic' : 'Manual'}'),
+          if (isAutomaticBuild)
+            Text(
+                'Generation Type: ${isRandomGeneration ? 'Random' : 'Fairness'}'),
+          const Text('Selected Players:'),
+          Wrap(
+            spacing: 8,
+            children: _selectedPlayers.map((player) {
+              return Chip(
+                label: Text(player.fullName ?? 'Unnamed Player'),
+                onDeleted: () {
+                  setState(() {
+                    _selectedPlayers.remove(player);
+                  });
+                },
+              );
+            }).toList(),
           ),
         ],
       ),

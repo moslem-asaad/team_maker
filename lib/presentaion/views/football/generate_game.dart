@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:team_maker/domain/entities/game.dart';
 import 'package:team_maker/domain/entities/team.dart';
 import 'package:team_maker/domain/entities/player.dart';
+import 'package:team_maker/presentaion/views/football/game.dart';
 import 'package:team_maker/service/game_service.dart';
 import 'package:team_maker/service/team_service.dart';
 
@@ -100,6 +101,7 @@ void _swapPlayers() {
       }
     }
   }
+  
 
   // Check if exactly two teams are involved and both have an equal number of selected players
   if (selectedPlayersByTeam.keys.length == 2) {
@@ -165,8 +167,12 @@ void _swapPlayers() {
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('The game saved succefully')),
       );
-    Navigator.pop(context);
+    Navigator.push(context, MaterialPageRoute(builder: (context){
+      return GameView(game: widget.game,fromGenerated: true,);
+    }));
   }
+
+
 
 
 
@@ -233,7 +239,7 @@ void _swapPlayers() {
           ),
         ],
       ),
-      backgroundColor: Color.fromARGB(255, 201, 233, 255),
+      backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -285,6 +291,7 @@ void _swapPlayers() {
                                     onTap: () {
                                       setState(() {
                                         selectedPlayers[player.id!] = !isSelected; // Toggle selection state
+                                          print(player.id!);
                                       });
                                     },
                                     child: Container(

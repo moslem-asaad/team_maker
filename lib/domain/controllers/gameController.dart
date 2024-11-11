@@ -4,12 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:team_maker/domain/entities/game.dart';
 import 'package:team_maker/domain/entities/player.dart';
 
+import '../entities/score.dart';
+import '../entities/team.dart';
+
 class Gamecontroller{
   static const String _gamessKey = 'games';
   List<Game> _games = [];
 
   // Load games from local storage
   Future<void> loadGames() async {
+    print('loading games');
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? gamesJson = prefs.getString(_gamessKey);
     if (gamesJson != null) {
@@ -33,6 +37,11 @@ class Gamecontroller{
     return _games;
   }
 
+  Future<void> deleteAllGames() async {
+    _games.clear();
+    await _savegames();
+  }
+
    // Delete a game by index
   Future<void> deleteGame(int index) async {
     if (index >= 0 && index < _games.length) {
@@ -54,5 +63,15 @@ class Gamecontroller{
     await game.generateTeams();
     return game;
   } 
+
+  Future<void> addScore(Game game,Score score) async{
+    game.addScore(score);
+    await _savegames();
+  }
+
+  Future <void> editScore(Game game,Score score) async{
+    game.editScore(score);
+    await _savegames();
+  }
   
 }

@@ -23,7 +23,6 @@ void main() {
         pickSportRout: (context) => const PickSport(),
         footballRout:(context) => const Football(),
         playerManegmentRout: (context) => const PlayerManagementScreen(),
-        gameRout: (context) => const Game(),
       },
     )
   );

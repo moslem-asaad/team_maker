@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:team_maker/domain/entities/score.dart';
 import 'package:team_maker/domain/entities/team.dart';
 
 import 'player.dart';
@@ -13,8 +15,9 @@ class Game {
 
   List<Team>? teams; // default 2 teams
   String? gameDuration;
-  List<int>? score; //[0] - team1 scoore, [1] team2 score ..
-
+  //List<int>? score; //[0] - team1 scoore, [1] team2 score ..
+  //Map<List<Team>,List<int>>? scores; /// modify
+  List<Score>? scores = [];
   bool? automaticGenerating = true;
   bool? randomGenerating = false;
 
@@ -23,7 +26,10 @@ class Game {
       this.players,
       this.automaticGenerating,
       this.randomGenerating}) {
+        if(players!.length < 2) throw Exception('game should contain at least two players');
+        if(players!.length < numOfTeams!) throw Exception("number of teams can't exceed the number of players (you defined ${numOfTeams} teams while having just ${players!.length} players)");
     gameDate = DateTime.now();
+
     generateTeams();
   }
 
@@ -55,7 +61,7 @@ class Game {
   }
 
   List<Team> generateRandomlly() {
-   // int numTeams = calculateNumOfTeams();
+    // int numTeams = calculateNumOfTeams();
 
     teams = List.generate(numOfTeams!, (index) => Team([]));
 
@@ -72,8 +78,11 @@ class Game {
     }
 
     // Step 5: Recalculate each team's average rating
+    int indx = 1;
     for (var team in teams!) {
       team.calculateOverall();
+      team.defaultName = 'Team ${indx}';
+      indx++;
     }
 
     this.teams = teams!;
@@ -125,8 +134,11 @@ class Game {
     }
 
     // Recalculate each team’s overall rating
+    int indx = 1;
     for (var team in teams!) {
       team.calculateOverall();
+      team.defaultName = 'Team ${indx}';
+      indx++;
     }
     this.teams = teams!;
     return teams!;
@@ -134,7 +146,7 @@ class Game {
 
   // Method to find the optimal epsilon
   double findOptimalEpsilon() {
-   // int numTeams = calculateNumOfTeams();
+    // int numTeams = calculateNumOfTeams();
     double minEpsilon = 0;
     double maxEpsilon = players!.map((p) => p.overall ?? 0).reduce(max) -
         players!.map((p) => p.overall ?? 0).reduce(min);
@@ -195,6 +207,24 @@ class Game {
         : numTeams.toInt();
   }*/
 
+  /*void addScore(Team team1, Team team2, int scoreTeam1, int scoreTeam2) {
+    scores ??= {};
+    scores![<Team>[team1, team2]] = <int>[scoreTeam1, scoreTeam2];
+  }*/
+  void addScore(Score score) {
+    scores ??= [];
+    scores!.add(score);
+  }
+
+  void editScore(Score score) {
+    for (var s in scores!) {
+      if (s.id == score.id) {
+        s = score;
+        break;
+      }
+    }
+  }
+
   factory Game.fromJson(Map<String, dynamic> json) {
     return Game(
       numOfTeams: json['numOfTeams'] as int?,
@@ -210,8 +240,10 @@ class Game {
           ?.map((teamJson) => Team.fromJson(teamJson))
           .toList()
       ..gameDuration = json['gameDuration'] as String?
-      ..score =
-          (json['score'] as List<dynamic>?)?.map((e) => e as int).toList();
+      ..scores = (json['scores'] as List<dynamic>?)
+          ?.map(
+              (scoreJson) => Score.fromJson(scoreJson as Map<String, dynamic>))
+          .toList();
   }
 
   Map<String, dynamic> toJson() => {
@@ -220,8 +252,57 @@ class Game {
         'players': players?.map((player) => player.toJson()).toList(),
         'teams': teams?.map((team) => team.toJson()).toList(),
         'gameDuration': gameDuration,
-        'score': score,
+        'scores': scores?.map((score) => score.toJson()).toList(),
         'automaticGenerating': automaticGenerating,
         'randomGenerating': randomGenerating,
       };
+
+  /*void editScore(Team team1, Team team2, int scoreTeam1, int scoreTeam2) {
+    if (scores != null && scores!.containsKey([team1, team2])) {
+      scores![<Team>[team1, team2]] = <int>[scoreTeam1, scoreTeam2];
+    } else {
+      throw Exception('Score for the specified teams does not exist.');
+    }
+  }*/
+
+  /*factory Game.fromJson(Map<String, dynamic> json) {
+    return Game(
+      numOfTeams: json['numOfTeams'] as int?,
+      players: (json['players'] as List<dynamic>?)
+          ?.map((playerJson) => Player.fromJson(playerJson))
+          .toList(),
+      automaticGenerating: json['automaticGenerating'] as bool?,
+      randomGenerating: json['randomGenerating'] as bool?,
+    )
+      ..gameDate =
+          json['gameDate'] != null ? DateTime.parse(json['gameDate']) : null
+      ..teams = (json['teams'] as List<dynamic>?)
+          ?.map((teamJson) => Team.fromJson(teamJson))
+          .toList()
+      ..gameDuration = json['gameDuration'] as String?
+      ..scores = (json['scores'] as Map<String, dynamic>?)?.map(
+        (key, value) {
+          List<Team> teams = (jsonDecode(key) as List<dynamic>)
+              .map((teamJson) => Team.fromJson(teamJson))
+              .toList();
+          List<int> scores = (value as List<dynamic>).cast<int>();
+          return MapEntry(teams, scores);
+        },
+      );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'gameDate': gameDate?.toIso8601String(),
+        'numOfTeams': numOfTeams,
+        'players': players?.map((player) => player.toJson()).toList(),
+        'teams': teams?.map((team) => team.toJson()).toList(),
+        'gameDuration': gameDuration,
+        'scores': scores?.map((key, value) {
+          String encodedKey =
+              jsonEncode(key.map((team) => team.toJson()).toList());
+          return MapEntry(encodedKey, value);
+        }),
+        'automaticGenerating': automaticGenerating,
+        'randomGenerating': randomGenerating,
+      };*/
 }
