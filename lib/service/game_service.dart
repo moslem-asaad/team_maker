@@ -73,4 +73,11 @@ class GameService {
     Score score = await _scoreService.updateScore(scoreId, scoreTeam1,scoreTeam2);
     await _gameController.editScore(game,score);
   }
+
+  Future<void> deleteGameByInstance(Game game) async {
+    await _gameController.deleteGameByInstance(game);
+  }
+
+
+  
 }

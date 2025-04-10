@@ -31,7 +31,8 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   }
 
   Future<void> _addPlayer() async {
-    showPlayerDataDialog(context, (String name, int attackRate, int midRate, int defRate) async {
+    showPlayerDataDialog(context,
+        (String name, int attackRate, int midRate, int defRate) async {
       await _playerService.addPlayer(
         name: name,
         attackRate: attackRate,
@@ -68,8 +69,8 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     );
   }
 
-  Future<void> _deletePlayer(int index) async {
-    await _playerService.deletePlayer(index);
+  Future<void> _deletePlayer(Player player) async {
+    await _playerService.deletePlayer(player);
     setState(() {
       _players = _playerService.getAllPlayers();
     });
@@ -78,29 +79,53 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Player Management')),
-      body: ListView.builder(
-        itemCount: _players.length,
-        itemBuilder: (context, index) {
-          final player = _players[index];
-          return ListTile(
-            title: Text(player.fullName ?? 'Unknown Player'),
-            subtitle: Text('Overall: ${player.overall?.toStringAsFixed(2) ?? 'N/A'}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _editPlayer(index),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: GridView.count(
+          crossAxisCount: 2, // 2 بطاقات في كل صف
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.2, // اضبط حسب محتوى البطاقة
+          children: List.generate(_players.length, (index) {
+            final player = _players[index];
+            return InkWell(
+              onTap: () => _editPlayer(index),
+              borderRadius: BorderRadius.circular(12),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _deletePlayer(index),
+                color: Colors.grey[100],
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        player.fullName ?? 'Unknown Player',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'Overall: ${player.overall?.toStringAsFixed(2) ?? 'N/A'}',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deletePlayer(player),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          }),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addPlayer,

@@ -4,6 +4,7 @@ import 'package:team_maker/presentaion/constFunctions/getLogo.dart';
 import 'package:team_maker/constants/routes.dart';
 import 'package:team_maker/presentaion/views/football/football.dart';
 import 'package:team_maker/presentaion/views/football/game.dart';
+import 'package:team_maker/presentaion/views/football/home_football.dart';
 import 'package:team_maker/presentaion/views/football/player_managment.dart';
 import 'package:team_maker/presentaion/views/pick_sport.dart';
 
@@ -21,7 +22,7 @@ void main() {
       home: const HomePage(),
       routes: {
         pickSportRout: (context) => const PickSport(),
-        footballRout:(context) => const Football(),
+        footballRout:(context) => HomeScreenFootball(),
         playerManegmentRout: (context) => const PlayerManagementScreen(),
       },
     )

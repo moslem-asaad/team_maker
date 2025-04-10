@@ -98,6 +98,10 @@ class _FootballState extends State<Football> {
       ),
       body: Column(
         children: [
+          /*Icon(
+            Icons.shield,
+            color: lightBlue,
+          ),*/
           // Manage Games Section
           if (_games.length > 0) _gamesSection(),
           const Divider(height: 1),

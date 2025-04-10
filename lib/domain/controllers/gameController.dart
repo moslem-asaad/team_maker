@@ -73,5 +73,11 @@ class Gamecontroller{
     game.editScore(score);
     await _savegames();
   }
+
+  Future<void> deleteGameByInstance(Game game) async {
+    _games.removeWhere((g) => g.gameDate == game.gameDate); // أو استخدم معرف فريد إن وجد
+    await _savegames();
+  }
+
   
 }

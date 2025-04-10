@@ -24,17 +24,19 @@ class PlayerController {
     await prefs.setString(_playersKey, playersJson);
   }
 
-  Future<String> nextPlayerId ()async{
+  Future<String> nextPlayerId() async {
     return _players.length.toString();
   }
 
- // Add a player
-  Future<void> addPlayer(String name,int attackRate,int midRate,int defRate) async {
-    name = name == ''? 'player ${await nextPlayerId()}' : name;
-    attackRate = attackRate == 0? 75:attackRate;
-    midRate = midRate == 0? 75:midRate;
-    defRate = defRate == 0? 75:defRate;
-    Player newPlayer = Player(name, attackRate, midRate, defRate, await nextPlayerId());
+  // Add a player
+  Future<void> addPlayer(
+      String name, int attackRate, int midRate, int defRate) async {
+    name = name == '' ? 'player ${await nextPlayerId()}' : name;
+    attackRate = attackRate == 0 ? 75 : attackRate;
+    midRate = midRate == 0 ? 75 : midRate;
+    defRate = defRate == 0 ? 75 : defRate;
+    Player newPlayer =
+        Player(name, attackRate, midRate, defRate, await nextPlayerId());
     _players.add(newPlayer);
     await _savePlayers();
   }
@@ -45,8 +47,9 @@ class PlayerController {
   }
 
   // Edit a player
-  Future<void> editPlayer(int index, String name,int attackRate,int midRate,int defRate,String id) async {
-    Player updatedPlayer = Player(name, attackRate, midRate, defRate,id);
+  Future<void> editPlayer(int index, String name, int attackRate, int midRate,
+      int defRate, String id) async {
+    Player updatedPlayer = Player(name, attackRate, midRate, defRate, id);
     if (index >= 0 && index < _players.length) {
       _players[index] = updatedPlayer;
       await _savePlayers();
@@ -54,10 +57,15 @@ class PlayerController {
   }
 
   // Delete a player
-  Future<void> deletePlayer(int index) async {
+  /*Future<void> deletePlayer(int index) async {
     if (index >= 0 && index < _players.length) {
       _players.removeAt(index);
       await _savePlayers();
     }
+  }*/
+
+  Future<void> deletePlayer(Player player) async {
+    _players.removeWhere((p) => p.id == player.id); 
+    await _savePlayers(); 
   }
 }

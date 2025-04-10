@@ -49,7 +49,11 @@ class PlayerService {
   }
 
   // Delete a player by index
-  Future<void> deletePlayer(int index) async {
+  /*Future<void> deletePlayer(int index) async {
     await _playerController.deletePlayer(index);
-  }
+  }*/
+
+  Future<void> deletePlayer(Player player) async {
+    await _playerController.deletePlayer(player);
+}
 }
